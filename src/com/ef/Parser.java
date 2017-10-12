@@ -17,12 +17,7 @@ public class Parser {
 
     public static void main(String[] args) {
 
-//        for (String arg : args) {
-//            System.out.println(arg);
-//            String[] matches = arg.split("=");
-//            System.out.println(matches[matches.length-1]);
-//        }
-        args = new String[]{"--startDate=2017-01-01.13:00:00", "--duration=daily", "--threshold=100"};
+        args = new String[]{"--startDate=2017-01-01.13:00:00", "--duration=hourly", "--threshold=100"};
 
         if (args.length == 3) {
             String date = args[0].split("=")[args[0].split("=").length - 1];
