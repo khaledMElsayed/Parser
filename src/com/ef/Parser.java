@@ -1,6 +1,7 @@
 package com.ef;
 
 import java.io.*;
+import java.sql.*;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -11,100 +12,116 @@ import java.util.Date;
  * Created by khaled.mohamed on 10/12/2017.
  */
 public class Parser {
-    private static final String FILE_NAME_READ = "access.log.txt";
-    private static final String FILE_NAME_WRITE = "log.txt";
-
+    private static String FILE_NAME_READ = "access.log";
+    private static String FILE_NAME_WRITE = "resultLog.log";
 
     public static void main(String[] args) {
-
-        args = new String[]{"--startDate=2017-01-01.13:00:00", "--duration=hourly", "--threshold=100"};
-
-        if (args.length == 3) {
-            String date = args[0].split("=")[args[0].split("=").length - 1];
-            String duration = args[1].split("=")[args[1].split("=").length - 1];
-            int threshold = Integer.parseInt(args[2].split("=")[args[2].split("=").length - 1]);
-
-            System.out.println(date + "\n" + duration + "\n" + threshold);
-            findStartAndEndDate(date, duration);
-        }
-
-        BufferedReader reader = null;
+        Date startDate = null;
+        Date endDate = null;
+        int threshold = 0;
         BufferedWriter writer = null;
 
+        /**
+         * check if args comes from command line with file name or not
+         * and check the date hourly or daily
+         * and get start and end date.
+         */
+        if (args.length == 3) {
+            String date = args[0].split("=")[args[0].split("=").length - 1];
+
+            String duration = args[1].split("=")[args[1].split("=").length - 1];
+            threshold = Integer.parseInt(args[2].split("=")[args[2].split("=").length - 1]);
+
+            DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd.HH:mm:ss");
+            try {
+                startDate = dateFormat.parse(date);
+                if (duration.equals("hourly")) {
+                    Calendar c = Calendar.getInstance();
+                    c.setTime(startDate);
+                    c.add(Calendar.HOUR, 1); // number of Hours to add
+                    endDate = c.getTime(); // dt is now the new
+                } else if (duration.equals("daily")) {
+                    Calendar c = Calendar.getInstance();
+                    c.setTime(startDate);
+                    c.add(Calendar.HOUR, 1); // number of days to add
+                    endDate = c.getTime(); // dt is now the new
+                }
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+        } else if (args.length == 4) {
+            FILE_NAME_READ = args[0].split("=")[args[0].split("=").length - 1];
+            String date = args[1].split("=")[args[1].split("=").length - 1];
+            String duration = args[2].split("=")[args[2].split("=").length - 1];
+            threshold = Integer.parseInt(args[3].split("=")[args[3].split("=").length - 1]);
+            DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd.HH:mm:ss");
+            try {
+                startDate = dateFormat.parse(date);
+                if (duration.equals("hourly")) {
+                    Calendar c = Calendar.getInstance();
+                    c.setTime(startDate);
+                    c.add(Calendar.HOUR, 1); // number of Hours to add
+                    endDate = c.getTime(); // dt is now the new
+                } else if (duration.equals("daily")) {
+                    Calendar c = Calendar.getInstance();
+                    c.setTime(startDate);
+                    c.add(Calendar.HOUR, 1); // number of days to add
+                    endDate = c.getTime(); // dt is now the new
+                }
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+        }
         try {
 
-            reader = new BufferedReader(new FileReader(FILE_NAME_READ));
+            /**
+             * make connection with the dateBase
+             * and load the file into table
+             */
+            Class.forName("com.mysql.jdbc.Driver");
+            Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/log", "root", "root");
+
+            //here log is database name, root is username and "" is password
+            Statement statement = con.createStatement();
+            statement.executeQuery("LOAD DATA LOCAL INFILE '" + FILE_NAME_READ + "' INTO TABLE logfile" +
+                    " FIELDS TERMINATED BY '|'" +
+                    " (datelog, ip, request, STATUS, useragent)");
+
+            ResultSet logResult = statement.executeQuery("select logfile.* , count(*) as requests from logfile" +
+                    " where datelog >= '" + new Timestamp(startDate.getTime()) + "'" +
+                    " And datelog <= '" + new Timestamp(endDate.getTime()) + "' group by ip" +
+                    " having requests >= " + threshold + "");
+
+            /**
+             * write result of query into file
+             */
             writer = new BufferedWriter(new FileWriter(FILE_NAME_WRITE));
 
-            readAndWriteLogFile(reader, writer);
-
-
-        } catch (IOException e) {
-
-            e.printStackTrace();
-
-        } finally {
-
-            try {
-
-                if (reader != null)
-                    reader.close();
-
-                if (writer != null)
-                    writer.close();
-
-            } catch (IOException ex) {
-
-                ex.printStackTrace();
-
+            while (logResult.next()) {
+                writer.write(logResult.getTimestamp("datelog") + "|" +
+                        logResult.getString("ip") + "|" +
+                        logResult.getString("request") + "|" +
+                        logResult.getInt("status") + "|" +
+                        logResult.getString("useragent") +
+                        "\n");
+                System.out.println(logResult.getString("ip") + " has " + threshold + " or more requests between "
+                        + new Timestamp(startDate.getTime()) + " and " + new Timestamp(endDate.getTime()));
             }
 
-        }
+            if (writer != null)
+                writer.close();
 
-    }
-
-    private static void findStartAndEndDate(String date, String duration) {
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss");
-        try {
-            Date startDate = dateFormat.parse(date);
-            if (duration.equals("hourly")) {
-                Calendar c = Calendar.getInstance();
-                c.setTime(startDate);
-                c.add(Calendar.HOUR, 1);  // number of Hours to add
-                Date endDate = c.getTime();  // dt is now the new date
-                System.out.println(endDate);
-            } else if (duration.equals("daily")) {
-                Calendar c = Calendar.getInstance();
-                c.setTime(startDate);
-                c.add(Calendar.DATE, 1);  // number of days to add
-                Date endDate = c.getTime();  // dt is now the new date
-                System.out.println(endDate);
-            }
-        } catch (ParseException e) {
-            e.printStackTrace();
+            /**
+             *load result file in db
+             */
+            statement.executeQuery("LOAD DATA LOCAL INFILE 'resultLog.log' INTO TABLE resultlog" +
+                    " FIELDS TERMINATED BY '|'" +
+                    " (datelog, ip, request, STATUS, useragent)");
+            // close connection
+            con.close();
+        } catch (Exception e) {
+            System.out.println(e);
         }
     }
-
-    private static void readAndWriteLogFile(BufferedReader reader, BufferedWriter writer) {
-        try {
-            String sCurrentLine;
-            while ((sCurrentLine = reader.readLine()) != null) {
-//                System.out.println(sCurrentLine);
-                String[] matches = sCurrentLine.split("\\|");
-                for (String match : matches) {
-                    System.out.print(match + "    ");
-                    writer.write(match + "    ");
-
-                }
-                writer.write("\n");
-                System.out.println();
-            }
-        } catch (IOException e) {
-
-            e.printStackTrace();
-
-        }
-    }
-
-
 }
+
