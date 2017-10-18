@@ -32,7 +32,7 @@ public class Parser {
             String duration = args[1].split("=")[args[1].split("=").length - 1];
             threshold = Integer.parseInt(args[2].split("=")[args[2].split("=").length - 1]);
 
-            DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd.HH:mm:ss");
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss");
             try {
                 startDate = dateFormat.parse(date);
                 if (duration.equals("hourly")) {
@@ -43,7 +43,7 @@ public class Parser {
                 } else if (duration.equals("daily")) {
                     Calendar c = Calendar.getInstance();
                     c.setTime(startDate);
-                    c.add(Calendar.HOUR, 1); // number of days to add
+                    c.add(Calendar.DATE, 1); // number of days to add
                     endDate = c.getTime(); // dt is now the new
                 }
             } catch (ParseException e) {
@@ -54,7 +54,7 @@ public class Parser {
             String date = args[1].split("=")[args[1].split("=").length - 1];
             String duration = args[2].split("=")[args[2].split("=").length - 1];
             threshold = Integer.parseInt(args[3].split("=")[args[3].split("=").length - 1]);
-            DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd.HH:mm:ss");
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss");
             try {
                 startDate = dateFormat.parse(date);
                 if (duration.equals("hourly")) {
@@ -65,7 +65,7 @@ public class Parser {
                 } else if (duration.equals("daily")) {
                     Calendar c = Calendar.getInstance();
                     c.setTime(startDate);
-                    c.add(Calendar.HOUR, 1); // number of days to add
+                    c.add(Calendar.DATE, 1); // number of days to add
                     endDate = c.getTime(); // dt is now the new
                 }
             } catch (ParseException e) {
